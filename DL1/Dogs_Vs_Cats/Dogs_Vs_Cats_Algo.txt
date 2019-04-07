@@ -1,0 +1,34 @@
+1. Download the Data
+2. Load the Required Libraries
+3. Define the Path and Size of the Image
+4. Check the files in the path defined above
+5. Grab 5 data from valid cats and show as an Image
+6. Check the image as an array
+7. Define the architecture, data and learner(data contains the validation and training data & learn contains the model)
+8. Fit the Learner
+9. Analyzing results ...Check for val_y and classes in data
+10. Check for prediction on the model(note: It returns log)
+11. Check the results
+12. Analyze Result with a Mask:-
+    a. create random_by_mask and random_by_correct
+    b. create most_by_mask and mosk_by_correct
+    c. create method plot_val_with_title and plots
+13. Use LR finder and plot
+14. User new LR to fit the learner
+
+
+Augmenting the Data
+1. Augment data using tfms (aug used transforms_side_on)
+2. Create the learner and fit 
+3. Visualize the augmented data 
+  ```data = ImageClassifierData.from_paths
+     (data.aug_dl) data.trn_ds.denorm(x)[1]
+4. Learn.fit cycle len 1
+5. change laern.precompute to False
+5. fit learn cycle len 1 epoch = 3
+6. Learn.plot_lr()
+7. save and load Model
+8. unfreeze all the layers
+9. use differential learning rate 
+10. Use Training time augmentation
+11. Plot Confusion Matrix

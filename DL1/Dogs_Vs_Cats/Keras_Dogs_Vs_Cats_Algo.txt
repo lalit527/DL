@@ -1,0 +1,13 @@
+Keras:
+0. Import Keras libraries
+1. Path to train_data_dir and validation_data_dir.
+2. Create train and test datagenerator from ImageDataGenerator(Use flow_from_directory) to specify path.
+3. Use pretrained Resnet50 model. Add layer GlobalAveragePooling2D, Dense, Dense1, prediction1.
+4. Create a Model object
+5. Make all base model layer trainable to False
+6. Compile the Model.
+7. Fit the model.
+8. Unfreeze some layers compile and fit again.
+9. Use learning_rate_reduction as a callback in the model.
+10. Use RMSProp Optimizer with lr, rho, epsilon and decay.
+11. Fit the model for 10 epochs.
