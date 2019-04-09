@@ -1,0 +1,165 @@
+Pascal-multi:-
+1. Load the Libraries
+2. Create Path and load train json file.
+3. Create variables for Dict Keys(IMAGES, ANNOTATIONS, CATEGORIES)
+   (FILE_NAME, ID, IMG_ID, CAT_ID, BBOX, NAME)
+4. Create id-category, id-filenames dict and id array.
+5. Define JPEGS and Image path
+6. Create methods to convert from bounding-box to height-width and vice-versa.
+7. create methods to show_image, draw_outline, draw_rectangle, draw_text & draw_image(image with anno), 
+   draw_index(open image from index and load annotation).
+8. Create multiclass dataframe. Filename - multiple classes('000017.jpg'	'horse person')
+9. Define model, sz, bs. Define the tfms and md.(ICD - PATH, JPEGS, MC_CSV)
+10. Load pretrained convlearner model with arch and define learn optim as an Adam optim
+11. Do LR find (1e-5, 100), plot the LR.
+12. Choose LR and fit, (lr, 1, cycle_len=3, use_clr=(32, 5))
+13. Define Differential LRs and unfreeze last 2 layers, find lr and fit(lrs/10, 1, cycle_len=5, use_clr=(32,5)).
+14. Save and load the weights. (learn.save & learn.load)
+15. Predict y from learner, get x from data loader, covert x to np.
+16. Plot the images with categories.
+    '''
+    ima=md.val_ds.denorm(x)[i]
+    ya = np.nonzero(y[i]>0.4)[0]
+    b = '\n'.join(md.classes[o] for o in ya)
+    ax = show_img(ima, ax=ax)
+    draw_text(ax, (0,0), b)
+    '''
+
+BBox per cell
+Set up data:-
+
+1. Define CLAS_CSV, MBB_CSV, f_model, sz, bs.
+2. Create list mc for categories from trn_ids, create list id2cat and dict cat2id(id2cat values as values and index as keys),
+   create mcs an array of all categories
+3. get val_idx from trn_fns and split_by_idx(val_idxs, mcs).
+4. Create a dataframe of multi bounding box from trn_ids
+  '000023.jpg	229 8 278 244 219 229 509 333 0 1 369 116 1 2 ...'
+5. Create augmentation [RF, RL, RR] with tfm_y, tfms, md.
+6. define method get_cmap, num_colr = 12. Derive cmap and colr_list.
+7. show_ground_truth 
+8. Define ConcatLblDataset(Dataset) class. (x, (y,self.y2[i]))
+9. Create trn_ds2 and val_ds2 with ConcatLblDataset(md.trn_ds, trn_mcs), also add new dataset to both
+   train and val - md.trn_dl.dataset = trn_ds2  
+10. Define x, y from val and trn_dl. Also, denorm x = md.trn_ds.ds.denorm(x)
+11. Show Ground truth Images.
+
+
+Setup THe Model:-
+1. Setup 4 grid cell in Image. We will predict Image in each grid.
+   Define anc_grid=4, k=1, anc_offset, anc_x, anc_y, anc_ctrs, anc_sizes, anchors
+2. Define grid_sizes = V(np.array([1/anc_grid]), requires_grad=False).unsqueeze(1)
+3. plt.scatter(anc_x, anc_y)
+4. anchors
+5. Define method hw2corners(ctr, hw): 
+   cancatenate [ctr-hw/2, ctr+hw/2] along dim=1
+6. Define anchor corner anchor_cnr.
+7. Define 
+    n_clas = len(id2cat)+1
+    n_act = k*(4+n_clas)
+8. Define class for StdConv, method:flatten_conv, OutConv
+9. Class SSD_Head has 2 StdConv, 1 outConv
+11. Create convnetBuilder with custom head as SSD_Head
+
+Train:- 
+1. Define method to return one_hot_embedding
+2. Class for BCE_Loss(num_classes), t-ohe, t-V(t[:,-1]), x-pred[:,:-1], w-self.get_weight(x,t)
+3. Define intersect, box_sz, jaccard
+4. Define methods:
+    get_y -  gets rid of any of the bounding boxes that are just padding.
+    actn_to_bb - grab the activations, we stick them through tanh, get actn_centers, actn_hw
+    map_to_ground_truth - combines these two sets of overlaps
+    ssd_1_loss((b_c,b_bb,bbox,clas,print_it=False)) - 
+      Get rid of the padding
+      Turn the activations to bounding boxes
+      Do the Jaccard
+      Do map_to_ground_truth
+      Check that there is an overlap greater than something around 0.4~0.5 
+      Find the indices of things that matched
+      Assign background class for the ones that did not match
+      Then finally get L1 loss for the localization, binary cross entropy loss for the classification, and return them which gets added in ssd_loss
+    ssd_loss - it loops through each image in the mini-batch and call ssd_1_loss function 
+5. Get x,y DL, convert to torch V.
+6. enumerate through y and set y[i] = o.cuda. learn.model.cuda()
+7. Get a batch from x. batch = learn.model(x)
+8. Calculate ssd_loss (batch, y)
+9. Add learn.crit as ssd_loss, set lr and lrs. Find LR and plot. Fit LR CL-5.
+10. Save and load weight.
+
+Testing:-
+1. get DL x, y and turn to torch V. Eval model. Create batch and get b_clas and b_bb. Check variable size.
+2. idx=7, get its b_clas and b_bb, ima - denorm(x)[idx]. bbox, clas - get_y(y[0][idx], y[1][idx])
+3. Define  torch_gt(ax, ima, bbox, clas, prs=None, thresh=0.4) method: returns show_ground_truth
+4. plot torch_gt(ax, ima, bbox, clas)
+5. plot torch_gt(ax, ima, anchor_cnr, b_clasi.max(1)[1])
+6. Check grid_sizes and anchors
+7. Define a_ic as activation to bb of b_bboxi, anchors
+8. Plot torch_gt(ax, ima, a_ic, b_clasi.max(1)[1], b_clasi.max(1)[0].sigmoid(), thresh=0.0)
+9 Check overlaps from jaccard(bbox.data, anchor_cnr.data). Check max and min of overlap
+10. map_to_ground_truth(overlaps)   clas[gt_idx]
+11. Define pos_idx thres > 0.5
+12. Change other classes to 'bg'
+    """
+    gt_clas[1-pos] = len(id2cat)
+    [id2cat[o] if o<len(id2cat) else 'bg' for o in gt_clas.data]
+    """
+13. Define gt_bbox, loc_loss, class_loss
+14. Plot Image with all bb.
+
+
+More Anchors:- 
+create anchor-
+1. Define anc_grids, anc_zooms, anc_ratios, anchor_scales, k, anc_offsets
+2. anc_x = np.concatenate of [np.repeat(np.linspace(ao, 1-ao, ag), ag) for ao,ag in zip(anc_offsets,anc_grids)]
+   anc_y, anc_ctrs
+3. Define anc_sizes, grid_sizes, anchors, anchor_cnr
+4. Get x, y as DL and denormalize x=md.val_ds.ds.denorm(x)
+5. reshape a to anchor_cnr
+6. show_ground_truth of ax x[0] a
+
+Model:-
+1. SSD_MultiHead-k, bias
+   a. Dropout 0.4
+   b. 4 StdConv 512-256
+   c. 4 OutConv k, 256
+   dp(relu(x))-conv0(x)-conv1(x)-out0(x)[o1c,o1l], 
+   returns [torch.cat([o1c,o2c,o3c], dim=1), torch.cat([o1l,o2l,o3l], dim=1)]
+2. Create ConvnetBuilder with SSD_MultiHead
+3. Define crit as ssd_loss, lr->1e-2, lrs
+4. Create batch. Check size of batch[0], batch[1]
+5. Get ssd loss for the batch
+6. lr find, plot fit. Freeze to -2 and fit again.
+7. Get b_clas,b_bb from a new batch
+8. Plot image with all bb.
+    '
+    ima=md.val_ds.ds.denorm(x)[idx]
+    bbox,clas = get_y(y[0][idx], y[1][idx])
+    a_ic = actn_to_bb(b_bb[idx], anchors)
+    torch_gt(ax, ima, a_ic, b_clas[idx].max(1)[1], b_clas[idx].max(1)[0].sigmoid(), 0.21)
+    '
+
+Focal Loss:
+1. Plot Result:-
+    '
+    ima=md.val_ds.ds.denorm(x)[idx]
+    bbox,clas = get_y(y[0][idx], y[1][idx])
+    a_ic = actn_to_bb(b_bb[idx], anchors)
+    clas_pr, clas_ids = b_clas[idx].max(1)
+    clas_pr = clas_pr.sigmoid()
+    torch_gt(ax, ima, a_ic, clas_ids, clas_pr, clas_pr.max().data[0]*thresh)
+    '
+2. class FocalLoss(BCE_Loss) - 
+    get_weight(x, t)
+        alpha,gamma = 0.25,1
+        p = x.sigmoid()
+        pt = p*t + (1-p)*(1-t)
+        w = alpha*t + (1-alpha)*(1-t)
+        return w * (1-pt).pow(gamma)
+    loss_f = FocalLoss(len(id2cat))
+3. ssd_loss from batch
+4. Lr find and plot. Fit - save -load - freeze to -2 - fit - save load - plot result
+
+
+NMS:-
+1. nms(boxes, scores, overlap=0.5, top_k=100)
+2. b_clas,b_bb from batch
+3. show_nmf
