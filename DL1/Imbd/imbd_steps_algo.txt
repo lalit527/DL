@@ -1,0 +1,78 @@
+IMBD:
+1. Import the Libraries. Fastai.learner, torchtext, torchtext(vocab, data), torchtext.dataset(language_modeling)
+   fastai.(rnn_reg, rnn_train, nlp, lm_rnn), dill as pickle, spacy
+2. Define PATH, TRN_PATH, VAL_PATH, TRN, VAL
+3. Read files from TRN into trn_files, print first 10 files. Read trn_files[6] into review and print it's content.
+4. Check total words count in dataset, !find {TRN} -name '*.txt' | xargs cat | wc -w, also for VAL
+5. Create Spacy token from en.
+6. Print Review with Spacy, spacy_tok(review[0]), loop and read all text and print as string join.
+7. Preprocess the data, create a torchtext field, which describes how to preprocess a piece of text
+   torchtext to make everything lowercase, and tokenize it with spacy.(store in TEXT)
+8. Define bs and bptt, create a dict of train=TRN_PATH(van and test). 
+   create md with LanguageModel.from_text_files(), ignore words less than 10.
+9. pickle.dump(TEXT, open(f'{PATH}models/TEXT.pkl','wb'))
+   len(md.trn_dl), md.nt, len(md.trn_ds), len(md.trn_ds[0].text)
+10. Check Text.vocab.stoi and itos, also check md.trn_ds each elements text property. Also check md.trn_ds with TEXT.numericalize
+11. print md.trn_dl(hint: it's an iterator)
+12. Define emb_sz=200, nh=500, nl=3
+13. opt_fn, create a Adam optimizer with less momentum partial(optim.Adam, betas=(0.7, 0.99))
+14. Create learner from md.get_model(opt_fn, em_sz, nh, nl, dropouti=0.05, dropout=0.05, wdrop=0.1, dropoute=0.02, dropouth=0.05)
+    learner.reg_fn = partial(seq2seq_reg, alpha=2, beta=1)
+    learner.clip = 0.3
+15. learner.fit(3e-3, 4, wds=1e-6, cycle_len=1, cycle_mult=2)
+    save_encoder and load_encoder
+    learner.fit - 3e-3, 4, wds=1e-6, cycle_len=10, cycle_save_name='adam3_10'
+    save_encoder('adam3_10_enc')
+    learner.fit - e-3, 1, wds=1e-6, cycle_len=20, cycle_save_name='adam3_20'
+    load_cycle - 'adam3_20',0
+16. check exp of val loss, save the text again pickle.dump(TEXT, open(f'{PATH}models/TEXT.pkl','wb'))
+17. Test - 
+    Define m as learner.model.
+    ss=""". So, it wasn't quite was I was expecting, but I really liked it anyway! The best"""
+    s = [Text.preprocess(ss)]
+    t=TEXT.numericalize(s)
+    ' '.join(s[0])
+18. Add method to learner model for testing
+    # Set batch size to 1
+    m[0].bs=1
+    # Turn off dropout
+    m.eval()
+    # Reset hidden state
+    m.reset()
+    # Get predictions from model
+    res,*_ = m(t)
+    # Put the batch size back to what it was
+    m[0].bs=bs
+19. Check top 10 predictions
+    nexts = torch.topk(res[-1], 10)[1]
+    [TEXT.vocab.itos[o] for o in to_np(nexts)]
+20. Generate text from model.
+    '
+    print(ss,"\n")
+    for i in range(50):
+        n=res[-1].topk(2)[1]
+        n = n[1] if n.data[0]==0 else n[0]
+        print(TEXT.vocab.itos[n.data[0]], end=' ')
+        res,*_ = m(n[0].unsqueeze(0))
+    print('...')
+    '
+21. Sentiment
+    Load the saved vocab from the language model - TEXT = pickle.load(path, 'rb')
+    imbd_label = data.field(sequential=False)
+    splits = torchtext.datasets.IMDB.splits(TEXT, IMDB_LABEL, 'data/')
+23. t = splits[0].examples[0]
+    t.label, ' '.join(t.text[:16])
+24. Create model form torch text splits
+    md2 = TextData.from_splits(PATH, splits, bs)
+    '
+    m3 = md2.get_model(opt_fn, 1500, bptt, emb_sz=em_sz, n_hid=nh, n_layers=nl, 
+           dropout=0.1, dropouti=0.4, wdrop=0.5, dropoute=0.05, dropouth=0.3)
+    m3.reg_fn = partial(seq2seq_reg, alpha=2, beta=1)
+    m3.load_encoder(f'adam3_10_enc')
+    '
+25. clip m3 to 25., lrs=1e-4,4,4,3,2
+    unfreeze last layer and fit - lr/2,1,accuracy
+    unfreeze all layers and fit - lrs,1,accuracy,cycle_len=1
+    m3.fit(lrs, 7, metrics=[accuracy], cycle_len=2, cycle_save_name='imdb2')
+    m3.load_cycle('imdb2', 4)
+    accuracy_np(*m3.predict_with_targs())
