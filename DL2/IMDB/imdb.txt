@@ -1,0 +1,198 @@
+1. Import libraries fastai.text, html
+2. Make data path DATA_PATH=Path('data/'), create if not present
+3. Define BOS, FLD and PATH('data/aclImbd')
+4. Define CLAS_PATH and LM_PATH - data/imdb_clas/, data/imdb_lm/
+5. Define Classes as list of 'neg', 'pos', 'unsup
+   define method get_test:path, and len(trn_texts),len(val_texts)
+   '
+   texts,labels = [],[]
+    for idx,label in enumerate(CLASSES):
+        for fname in (path/label).glob('*.*'):
+            texts.append(fname.open('r', encoding='utf-8').read())
+            labels.append(idx)
+    return np.array(texts),np.array(labels)
+   '
+6. col_names = ['labels','text']
+7. shuffle the text reviews.
+   seed42
+   trn_idx = np.random.permutation(len(trn_texts))
+   val_idx = np.random.permutation(len(val_texts))
+8. Define trn_texts, trn_labels also for val.
+9. create dataframe train, val
+   {'text':trn_texts, 'labels':trn_labels}
+10. Save as csv
+    df_trn[df_trn['labels']!=2].to_csv(CLAS_PATH/'train.csv', header=False, index=False)
+    df_val.to_csv(CLAS_PATH/'test.csv', header=False, index=False)
+
+    (CLAS_PATH/'classes.txt').open('w', encoding='utf-8').writelines(f'{o}\n' for o in CLASSES)
+11. split the data 
+    trn_texts,val_texts = sklearn.model_selection.train_test_split(np.concatenate([trn_texts,val_texts]), test_size=0.1)
+    len(trn_texts), len(val_texts)
+12. Save csv without label:
+    df_trn = pd.DataFrame({'text':trn_texts, 'labels':[0]*len(trn_texts)}, columns=col_names)
+    df_val = pd.DataFrame({'text':val_texts, 'labels':[0]*len(val_texts)}, columns=col_names)
+
+    df_trn.to_csv(LM_PATH/'train.csv', header=False, index=False)
+    df_val.to_csv(LM_PATH/'test.csv', header=False, index=False)
+13. Define chunksize 2000
+14. define function fixup to replace unwanted words.
+    rel = re.compile(r' +')
+    fixup(x) - 
+      '
+      x = x.replace('#39;', "'").replace('amp;', '&').replace('#146;', "'").replace(
+        'nbsp;', ' ').replace('#36;', '$').replace('\\n', "\n").replace('quot;', "'").replace(
+        '<br />', "\n").replace('\\"', '"').replace('<unk>','u_n').replace(' @.@ ','.').replace(
+        ' @-@ ','-').replace('\\', ' \\ ')
+      return re1.sub(' ', html.unescape(x))
+      '
+15. get_texts(df, n_lbls=1):
+    '
+    labels = df.iloc[:,range(n_lbls)].values.astype(np.int64)
+    texts = f'\n{BOS} {FLD} 1 ' + df[n_lbls].astype(str)
+    for i in range(n_lbls+1, len(df.columns)): 
+      texts += f' {FLD} {i-n_lbls} ' + df[i].astype(str)
+    texts = list(texts.apply(fixup).values)
+
+    tok = Tokenizer().proc_all_mp(partition_by_cores(texts))
+    return tok, list(labels)
+    '
+16. get_all(df, n_lbls):
+    '
+    tok, labels = [], []
+    for i, r in enumerate(df):
+        print(i)
+        tok_, labels_ = get_texts(r, n_lbls)
+        tok += tok_;
+        labels += labels_
+    return tok, labels
+    '
+17. Load train and test data set.
+    df_trn = pd.read_csv(LM_PATH/'train.csv', header=None, chunksize=chunksize)
+    df_val = pd.read_csv(LM_PATH/'test.csv', header=None, chunksize=chunksize)
+18. 
+    tok_trn, trn_labels = get_all(df_trn, 1)
+    tok_val, val_labels = get_all(df_val, 1)
+19. create tmp dir in LM_PATH, 
+    save tok_trn.npy in LM_PATH/tmp, np.save
+    token_trn load from PATH. np.load
+    same for tok_val.
+20. Count the frequency of characters and print 25 most.
+    freq = Counter(p for o in tok_trn for p in o)
+    freq.most_common(25)
+21. max_vocab = 60000
+    min_freq = 2
+22. Define itos as an list of freq.most_common(max_vocab) 
+    insert __pad__ and __unk__
+    stoi = collections.defaultdict(lambda:0, {v:k for k,v in enumerate(itos)})
+23. Define trn_lm and val_lm.
+    trn_lm = np.array([[stoi[o] for o in p] for p in tok_trn])
+    val_lm = np.array([[stoi[o] for o in p] for p in tok_val])
+24. Save and load:
+    np.save(LM_PATH/'tmp'/'trn_ids.npy', trn_lm)
+    np.save(LM_PATH/'tmp'/'val_ids.npy', val_lm)
+    pickle.dump(itos, open(LM_PATH/'tmp'/'itos.pkl', 'wb'))
+
+    trn_lm = np.load(LM_PATH/'tmp'/'trn_ids.npy')
+    val_lm = np.load(LM_PATH/'tmp'/'val_ids.npy')
+    itos = pickle.load(open(LM_PATH/'tmp'/'itos.pkl', 'rb'))
+25. Wikitext103.
+    em_sz,nh,nl = 400,1150,3
+27. Define PATh:-
+    PRE_PATH = PATH/'models'/'wt103'
+    PRE_LM_PATH = PRE_PATH/'fwd_wt103.h5'
+28. wgts = torch.load(PRE_LM_PATH, map_location=lambda storage, loc: storage)
+29. Encoder 
+    enc_wgets = to_np(wgts['0.encoder.weight'])
+
+30. 
+    itos2 = pickle.load((PRE_PATH/'itos_wt103.pkl').open('rb'))
+    stoi2 = collections.defaultdict(lambda:-1, {v:k for k,v in enumerate(itos2)})
+31. overwrite the weights into the wgts odict
+    wgts['0.encoder.weight'] = T(new_w)
+    wgts['0.encoder_with_dropout.embed.weight'] = T(np.copy(new_w))
+    wgts['1.decoder.weight'] = T(np.copy(new_w))
+Language Model.
+32. Define 
+    wd=1e-7
+    bptt=70
+    bs=52
+    opt_fn = partial(optim.Adam, betas=(0.8, 0.99))
+33. Create model object.
+    trn_dl = LanguageModelLoader(np.concatenate(trn_lm), bs, bptt)
+    val_dl = LanguageModelLoader(np.concatenate(val_lm), bs, bptt)
+    md = LanguageModelData(PATH, 1, vs, trn_dl, val_dl)
+34. Define Dropouts.
+    drops = np.array([0.25, 0.1, 0.2, 0.02, 0.15])*0.7
+35. Define learner.
+    md.get_model(opt_fn, em_sz, nh, nl, dropouti=drops[0], dropout=drops[1], wdrop=drops[2], dropoute=drops[3], dropouth=drops[4])
+    learner metric to accuracy
+    learner freeze to except last.
+36. Define Learning Rate.
+    lr = 1e-3
+    lrs = lr 
+    fit(lrs/2, 1, wds=wd, use_clr=(32,2), cycle_len=1)
+    save('lm_last_ft')
+    load('lm_last_ft')
+    unfreeze()
+    lr_find(start_lr=lrs/10, end_lr=lrs*10, linear=True)
+    sched.plot()
+    fit(lrs, 1, wds=wd, use_clr=(20,10), cycle_len=15)
+    save('lm1')
+    save_encoder('lm1_enc')
+    sched.plot_loss()
+37. Classifier Token:-
+    df_trn = pd.read_csv(CLAS_PATH/'train.csv', header=None, chunksize=chunksize)
+    df_val = pd.read_csv(CLAS_PATH/'test.csv', header=None, chunksize=chunksize)
+
+
+    tok_trn, trn_labels = get_all(df_trn, 1)
+    tok_val, val_labels = get_all(df_val, 1)
+38. Save tok_trn and trn_labels
+    (CLAS_PATH/'tmp').mkdir(exist_ok=True)
+
+    np.save(CLAS_PATH/'tmp'/'tok_trn.npy', tok_trn)
+    np.save(CLAS_PATH/'tmp'/'tok_val.npy', tok_val)
+
+    np.save(CLAS_PATH/'tmp'/'trn_labels.npy', trn_labels)
+    np.save(CLAS_PATH/'tmp'/'val_labels.npy', val_labels)
+39. Load tok_trn and tok_val.
+40. itos = pickle.load((LM_PATH/'tmp'/'itos.pkl').open('rb'))
+    stoi = collections.defaultdict(lambda:0, {v:k for k,v in enumerate(itos)})
+    len(itos)
+41. trn_clas = np.array([[stoi[o] for o in p] for p in tok_trn])
+    val_clas = np.array([[stoi[o] for o in p] for p in tok_val])
+    save as trn_ids.npy
+42. Classifier
+    Load trn_clas, val_clas from saved trn_ids.npy, ..
+    Load trn_labels, ... from saved trn_labels.npy
+43. bptt,em_sz,nh,nl = 70,400,1150,3
+    vs = len(itos)
+    opt_fn = partial(optim.Adam, betas=(0.8, 0.99))
+    bs = 48
+44. Load min_lbl from trn_lbl.min()
+    subtract min_lbl from trn_lbl and val_lbl
+    c = ten_lbl.max() + 1
+45. trn_ds = TextDataset(trn_clas, trn_lbl), val_ds = ..
+    trn_smpl = SortishSampler(trn_clas, key=len(trn_clas[x]), bs=bs//2)
+    trn_dl = DataLoader(trn_ds, bs//2, transpose=True, num_workers=1, pad_idx=1, sampler=trn_samp)
+    md=ModelData(PATH, trn_dl, val_dl)
+46. dps = np.array([0.4,0.5,0.05,0.3,0.4])*0.5
+47. define m as get_rnn_classifier(bptt, 20*70, c, vs, emb_sz=em_sz, n_hid=nh, n_layers=nl, pad_token=1,
+          layers=[em_sz*3, 50, c], drops=[dps[4], 0.1],
+          dropouti=dps[0], wdrop=dps[1], dropoute=dps[2], dropouth=dps[3])
+48. opt_fn = partial(optim.Adam, betas=(0.7, 0.99))
+49. learner=RNN_Learner(md, TextModel(to_gpu(m)), opt_fn=opt_fn)
+    learner.reg_fn = partial(seq2seq_reg, alpha=2, beta=1)
+    learner.clip = 0.25
+    learn.metrics = 'accuracy'
+50. lr=3e-3
+    lrm = 2.6
+    lrs = np.array([lr/(lrm**4), lr/(lrm**3), lr/(lrm**2), lr/lrm, lr])
+51. lrs=np.array([1e-4,1e-4,1e-4,1e-3,1e-2])
+52. wd = 1e-7
+    wd = 0
+    learn.load_encoder('lm1_enc')
+53. freeze_to(-1) and lr_find-lrs/100 and plot.
+54. learn.fit(lrs, 1, wds=wd, cycle_len=1, use_clr=(8,3))
+55. save, load, freeze_to(-2), git with 54.
+56. unfreeze,
