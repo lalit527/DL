@@ -1,0 +1,25 @@
+## Pets Breed Recognition
+https://github.com/fastai/fastai.git
+1. Load libraries for Image and error rate
+2. Download and untar data untar_data(URLs.PETS), define path with this.
+3. list path and folders in path defined above.
+4. define annotion and images path.
+5. use image path defined above to get first five files. use get_image_files. Check first 5 files.
+6. Use pattern r'/([^/]+)_\d+.jpg$' to get images. Seed-2 random.
+7. define data, us ImageDataBunch from.name.re to get data, normalize using imagenet_stats
+8. Use show_batch() to show few loaded images.
+9. print the classes in data, check length of classes, data.c
+10. create learner from create_cnn - databunch, model, metrics, print learner.model
+11. learner fit.one.cycle of 4.
+12. save lerner model weights, name it stage-1
+13. define interp, clasificationinterpretation from the learner
+14. Get losses and indx from interp's to_losses.
+15. This 3 should be same. len(data.valid_ds)==len(losses)==len(idxs)
+16. Plot the top_losses.
+17. plot_confusion_matrix, most confused.
+18. Unfreeze and fit on cycle.
+19. Load stage-1 save weights, do lr_find and recorded.plot
+20. learn.unfreeze()
+    learn.fit_one_cycle(2, max_lr=slice(1e-6,1e-4))
+21. Repeat the above steps with resnet50.
+22. Try above on a different dataset, URLs.MNIST_SAMPLE.
