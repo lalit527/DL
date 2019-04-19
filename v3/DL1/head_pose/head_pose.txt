@@ -1,0 +1,39 @@
+1. import vision
+2. path from BIWI_HEAD_POSE
+3. cal = np.genfromtxt(path/'01'/'rgb.cal', skip_footer=6); cal
+    fname = '09/frame_00667_rgb.jpg'
+    def img2txt_name(f): return path/f'{str(f)[:-7]}pose.txt'
+4. img = open_image(path/fname)
+    img.show()
+5. ctr = np.genfromtxt(img2txt_name(fname), skip_header=3); ctr
+6. convert_biwi(coords) 
+    c1 = coords[0] * cal[0][0]/coords[2] + cal[0][2]
+    c2 = coords[1] * cal[1][1]/coords[2] + cal[1][2]
+    tensor([c2, c1])
+  
+    get_ctr - f
+    ctr = np.genfromtxt(img2txt_name(f), skip_header=3)
+    r convert_biwi(ctr)
+    
+    get_ip - img, pts:
+    r ImagePoints(FlowField(img.size, pts), scale=True)
+7. get_ctr(fname)
+    ctr = get_ctr(fname)
+    img.show(y=get_ip(img, ctr), figsize)
+8. # Creating a dataset
+    Define data from PointsItemList.from_folder(path). split_by_valid_func(lambda o: o.parent.name=='13')
+    .label_from_func(get_ctr).transform(get_transform(), tfm_y=True, size=(120,160)).databunch().normalize(imagenet_stats)
+    data.show_batch(3, figsize=(9,6))
+9. learn = cnn_learner(data, models.resnet34)
+   learn.loss_func = MSELossFlat()
+    lr_find, plot
+    lr = 2e-2
+    fit_one_cycle(5, slice(lr))
+    save, load, show_results
+10. Data Augmentation:-
+      tfms = get_transforms(max_rotate=20, max_zoom=1.5, max_lighting=0.5, max_warp=0.4, p_affine=1., p_lighting=1.)
+      create data same as step 8
+11.  _plot(i,j,ax) - 
+      x,y = data.train_ds[0]
+      x.show(ax, y=y)
+      plot_multi(_plot, 3, 3, figsize=(8,6))
