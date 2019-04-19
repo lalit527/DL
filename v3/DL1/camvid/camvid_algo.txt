@@ -1,0 +1,53 @@
+1. Import vision, callbacks.hooks, utils.mem
+2. path from URLs.CAMVID
+3. define path_img and path_lbl
+4. load data from path_img into fnames (hint: Use get_image_files(path_lbl))
+5. Also load data from path_lbl into lbl_names
+6. get first image from fnames into img_f, open_image(img_f), them img.show(figsize)
+7. get_y_fn = lambda x: path_lbl/f'{x.stem}_P{x.suffix}'
+8. open_mask(get_y_fn(img_f)), mask.show(figsize, alpha)
+9. src_size = np.array(mask.shape[1:]); src_size, mask.data
+10. Define codes from np.loadtxt - path/codes.txt
+11. size = src_size // 2
+     '
+      free = gpu_mem_get_free_no_cache()
+	free = gpu_mem_get_free_no_cache()
+       # the max size of bs depends on the available GPU RAM
+       if free > 8200: bs=8
+       else:           bs=4
+       print(f"using bs={bs}, have {free}MB of GPU RAM free")
+      '
+12. Define src - SegmentationItemList.from_folder(path_img).split_by_fname_file('../valid.txt)..label_from_func(get_y_fn, classes=codes))
+     data - src.transform(get_transform(), size, tfm_y=True).databunch(bs=bs).normalize(imagenet_stats))
+     data.show_batch(2, figsize)
+    data.show_batch(2, figsize, ds_tyep=DatasetType.Valid)
+13. # Model:-
+     name2id = {v: k for k, v in enumerate(codes)}
+     void_code = name2id['void']
+     def acc_camvid - input, target
+           target = target.squeeze(1); mask = target != void_code
+           return (input.argmax(dim=1)[mask]==target[mask]).float().mean()
+     metrics = acc_camvid
+     wd = 1e-2
+14. learn = unet_learner(data, models.resnet34, metrics=metrics, wd=wd)
+     lr_find(learn)
+     learn.recorder.plot()
+15. lr=3e-3
+      learn.fit_one_cycle(10, slice(lr), pct_start=0.9)
+      learn.save('stage-1')
+      learn.load('stage-1')
+      learn.show_results(rows=3, figsize=(8,9))
+      learn.unfreeze()
+      lrs = slice(lr/400, lr/4)
+      learn.fit_one_cycle(12, lrs, pct_start=0.8)
+      learn.save('stage-2');
+16. # Big
+      size = src_size
+
+      free = gpu_mem_get_free_no_cache()
+      # the max size of bs depends on the available GPU RAM
+      if free > 8200: bs=3
+      else:           bs=1
+      print(f"using bs={bs}, have {free}MB of GPU RAM free")
+17. data from src same as step 12
+18. Repeat steps 14&15
