@@ -1,0 +1,43 @@
+1. import fastai.text
+2. path - URLs.IMBD_SAMPLE
+3. df read csv texts.csv
+4. df['text'][1]
+5 data_lm = TextDataBunch.from_csv(path, 'texts.csv')
+   data_lm.save()
+   data = load_data(path)
+6. data = TextClassDataBunch.from_csv(path, 'texts.csv')
+    data.show_batch()
+7. data.vocab.itos[:10]
+   data.train_ds[0][0] data.train_ds[0][0].data[:10]
+8. data - TextList.from_csv(path, 'texts.csv', cols='text')
+                .split_from_df(col=2)
+                .label_from_df(cols=0)
+                .databunch())
+9. bs=48
+    path - URLs.IMDB
+    ls path, path-train
+10. data_lm=TextList.from_folder(path).filter_by_folder(include=['train', 'test','unsup']).split_by_rand_pct(0.1).label_for_lm()databunch(bs
+      data_lm.save('data_lm.pkl')
+      data_lm = load_data(path, 'data_lm.pkl', bs=bs)
+      data_lm.show_batch()
+11. learn = language_model_learner(data_lm, AWD_LSTM, drop_mult=0.3)
+      lr_find, plot(skip_end=15)
+      fit_one_cycle(1, 1e-2, moms=(0.8,0.7))
+      save('fit_head'), load('fit_head')
+      unfreeze()
+      fit_one_cycle(10, 1e-3, moms=(0.8,0.7))
+      save('fit_tuned'), load('fit_tuned')
+ 12. TEXT = "I liked this movie because"
+       N_WORDS = 40
+       N_SENTENCES = 2
+       print("\n".join(learn.predict(TEXT, N_WORDS, temperature=0.75) for _ in range(N_SENTENCES)))
+       save_encoder('fine_tuned_enc')
+13. Classifier:- 
+      path = URLs.IMDB
+      data_clas TextList.from_folder   . split_by_folder   . label_from_folder   . databunch
+      save('data_clas.pkl')
+      load_data(path, 'data_clas.pkl', bs=bs)
+      show_batch()
+14. learn = text_classifier_learner(data_clas, AWD_LSTM, drop_mult=0.5)
+      learn.load_encoder('fine_tuned_enc')
+      learn.lr_find()
