@@ -1,0 +1,52 @@
+1. Import collab and tabular from fastai
+2. Define user, item, title = 'userId', 'movieId', 'title'
+3.  path - URLs.ML_SAMPLE
+4. read ratings from read_csv. print head
+5. define data from CollabDataBunch.from_df(ratings, seed=42)
+6. y_range = [0, 5.5]
+7. learn from collab_lerner - data, n_factor=50, y_range=y_range
+    fit_one_cycle(3, 5e-3)
+
+## Using total MovieLens
+8. define path from dataset downloaded from  http://files.grouplens.org/datasets/movielens/ml-100k.zip
+9. Read ratings from u.data, delimiter='\t', header=None, names=[user, item, 'rating', 'timestamp'], print head
+10. Read movies from u.item, delimiter='|', header=None, names=[item, 'title', 'rating', 'timestamp'], print head
+11. check len(ratings)
+12. rating_movie from ratings.merge(movies[[item, title]])
+13. data from CollabDataBunch.from_df - rating_movie, seed=42, valid_pct=0.1,  item_name=title
+14. show_batch from data
+15. y_range = [0, 5.5]
+16. learn from collab_lerner - data, n_factor=50, y_range=y_range, wd=1e-1
+      lr_find, plot, fit_one_cycle(5, 5e-3), 
+17. save('dotprod'), load
+18. print model.
+      g = rating_movie.groupby(title)['rating'].count()
+      get top_movies from g.sort_values(ascending=False).index.values[:1000]
+      top_movies[:10]
+19. movie_bias = learn.bias(top_movies, is_item=True)
+     movie_bias.shape
+20. mean_ratings = rating_movie.groupby(title)['rating'].mean()
+      movie_ratings = [(b, i, mean_ratings.loc[i]) for i,b in zip(top_movies,movie_bias)]
+21. item0 = lambda o:o[0]
+22. sorted(movie_ratings, key=item0)[:15]
+      sorted(movie_ratings, key=lambda o: o[0], reverse=True)[:15]
+23. movie_w = learn.weight(top_movies, is_item=True)
+      movie_w.shape
+24. movie_pca = movie_w.pca(3)
+      movie_pca.shape
+25. fac0,fac1,fac2 = movie_pca.t()
+       movie_comp = [(f, i) for f,i in zip(fac0, top_movies)]
+26. sorted(movie_comp, key=itemgetter(0), reverse=True)[:10]
+      sorted(movie_comp, key=itemgetter(0))[:10]
+27. movie_comp = [(f, i) for f,i in zip(fac1, top_movies)]
+      sorted(movie_comp, key=itemgetter(0), reverse=True)[:10]
+      sorted(movie_comp, key=itemgetter(0))[:10]
+28. idxs = np.random.choice(len(top_movies), 50, replace=False)
+      dxs = list(range(50))
+      X = fac0[idxs]
+      Y = fac2[idxs]
+      plt.figure(figsize=(15,15))
+      plt.scatter(X, Y)
+      for i, x, y in zip(top_movies[idxs], X, Y):
+           plt.text(x,y,i, color=np.random.rand(3)*0.7, fontsize=11)
+      plt.show()
