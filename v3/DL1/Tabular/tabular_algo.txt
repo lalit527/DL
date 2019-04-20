@@ -1,0 +1,19 @@
+1. Import fatai tabular
+2. path from untar_data URLs.ADULT_SAMPLE
+3. # define variable and cont and cat 
+    dep_var = 'salary'
+    cat_names = ['workclass', 'education, 'marital-status', 'occupation', 'relationship', 'race']
+    cont_names = ['age', 'fnlwgt', 'education-num']
+    procs = [FillMissing, Categorify, Normalize]
+4. Define test as TabularList.from_df(df.iloc[800:1000].copy(), path=path, cat_names=cat_names, cont_names=cont_names)
+5. data from TabularList
+                           .from_df(df, path=path, cat_names=cat_names, cont_names=cont_names, procs=procs)
+                           .split_by_idx(list(range(800,1000)))
+                           .label_from_df(cols=dep_var)
+                           .add_test(test)
+                           .databunch())
+6. data.show_batch(rows=10)
+7. learn = tabular_learner(data, layers=[200,100], metrics=accuracy)
+8. learn.fit(1, 1e-2)
+9. row = df.iloc[0]
+10. learn.predict(row)
