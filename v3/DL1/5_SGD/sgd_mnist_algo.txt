@@ -1,0 +1,65 @@
+1. Import basics from fastai
+2. path - data from  http://deeplearning.net/data/mnist/mnist.pkl.gz. 
+3. with gzip.open(path/'mnist.pkl.gz) as f:
+        ((x-train, y_train), (x_valid, y_valid), _) = pickle.load(f, encoding='latin-1')
+4. plt.imshow(x_train[0].reshape((28, 28)), cmap='gray')
+    x_train.shape
+5. x_train,y_train,x_valid,y_valid = map(torch.tensor, (x_train,y_train,x_valid,y_valid))
+    n,c = x_train.shape
+    x_train.shape, y_train.min(), y_train.max()
+6. bs=64
+    train_ds = TensorDataset(x_train, y_train)
+    valid_ds = TensorDataset(x_valid, y_valid)
+    data = DataBunch.create(train_ds, valid_ds, bs=bs)
+7. x,y = next(iter(data.train_dl))
+    x.shape,y.shape
+8. Define class Mnist_Logistic - init - linear(784, 10, bias=True)
+     forward - x - self.lin(x)
+     model = Mnist_Logistic().cuda()
+     model
+     model.lin
+     model(x).shape
+9. [p.shape for p in model.parameters()]
+10. lr=2e-2
+      loss_func = nn.CrossEntropyLoss()
+ 11. Define Update - x, y, lr. func:-
+      wd = 1e-5
+      y_hat = model(x)
+      w2 = 0.
+      for p in model.parameters(): w2 += (p**2).sum()
+      loss = loss_func(y_hat, y) + w2*wd
+      loss.backward()
+      with torch.no_grad():
+        for p in model.parameters():
+            p.sub_(lr * p.grad)
+            p.grad.zero_()
+      return loss.item()
+12.   losses = [update(x,y,lr) for x,y in data.train_dl]
+        plt.plot(losses);
+
+13. Define class Mnist_NN:-
+      Linear(784, 50, bias=True), Linear(50, 10, bias=True)
+      forward - x - l1(x) - relu - l2
+14.  model = Mnist_NN().cuda()
+       losses = [update(x,y,lr) for x,y in data.train_dl]
+        plt.plot(losses);
+
+15.   model = Mnist_NN().cuda()
+        def update(x,y,lr):
+    opt = optim.Adam(model.parameters(), lr)
+    y_hat = model(x)
+    loss = loss_func(y_hat, y)
+    loss.backward()
+    opt.step()
+    opt.zero_grad()
+    return loss.item()
+
+     losses = [update(x,y,1e-3) for x,y in data.train_dl]
+     plt.plot(losses);
+
+16. learn = Learner(data, Mnist_NN(), loss_func=loss_func, metrics=accuracy)
+      learn.lr_find()
+      learn.recorder.plot()
+      learn.fit_one_cycle(1, 1e-2)
+      learn.recorder.plot_lr(show_moms=True)
+      learn.recorder.plot_losses()
